@@ -15,8 +15,8 @@ export interface UserAvailability {
 export class AvailabilityService {
   private graphClient: GraphClientFactory;
 
-  constructor() {
-    this.graphClient = new GraphClientFactory();
+  constructor(graphClient: GraphClientFactory) {
+    this.graphClient = graphClient;
   }
 
   /**

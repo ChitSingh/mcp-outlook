@@ -14,9 +14,9 @@ export class FindMeetingTimesService {
   private availabilityService: AvailabilityService;
   private intersectionService: IntersectionService;
 
-  constructor() {
-    this.graphClient = new GraphClientFactory();
-    this.availabilityService = new AvailabilityService();
+  constructor(graphClient: GraphClientFactory) {
+    this.graphClient = graphClient;
+    this.availabilityService = new AvailabilityService(graphClient);
     this.intersectionService = new IntersectionService();
   }
 

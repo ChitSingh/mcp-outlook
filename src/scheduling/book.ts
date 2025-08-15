@@ -7,8 +7,8 @@ import config from '../config.js';
 export class BookingService {
   private graphClient: GraphClientFactory;
 
-  constructor() {
-    this.graphClient = new GraphClientFactory();
+  constructor(graphClient: GraphClientFactory) {
+    this.graphClient = graphClient;
   }
 
   /**
@@ -84,10 +84,7 @@ export class BookingService {
         dateTime: input.end,
         timeZone: config.server.defaultTimezone
       },
-      attendees: input.participants.map(email => ({
-        emailAddress: { address: email },
-        type: 'required'
-      })),
+      attendees: [],
       isOnlineMeeting: input.onlineMeeting,
       onlineMeetingProvider: input.onlineMeeting ? 'teamsForBusiness' : undefined,
       location: input.location ? {
@@ -100,10 +97,9 @@ export class BookingService {
       reminderMinutesBeforeStart: input.remindersMinutesBeforeStart
     };
 
-    // Set required vs optional attendees
+    // Set attendees based on input structure
     if (input.required || input.optional) {
-      eventData.attendees = [];
-      
+      // Use required/optional structure if provided
       if (input.required) {
         eventData.attendees.push(...input.required.map(email => ({
           emailAddress: { address: email },
@@ -117,6 +113,12 @@ export class BookingService {
           type: 'optional'
         })));
       }
+    } else {
+      // Fall back to participants if no required/optional structure
+      eventData.attendees = input.participants.map(email => ({
+        emailAddress: { address: email },
+        type: 'required'
+      }));
     }
 
     try {
@@ -129,6 +131,25 @@ export class BookingService {
       return event;
     } catch (error) {
       logger.error('Failed to create event:', error);
+      // Log detailed error information for debugging
+      if (error instanceof Error) {
+        logger.error(`Error name: ${error.name}`);
+        logger.error(`Error message: ${error.message}`);
+        logger.error(`Error stack: ${error.stack}`);
+        // Check if it's a GraphError with additional properties
+        if ('statusCode' in error) {
+          logger.error(`Graph error status code: ${(error as any).statusCode}`);
+        }
+        if ('code' in error) {
+          logger.error(`Graph error code: ${(error as any).code}`);
+        }
+        if ('body' in error) {
+          logger.error(`Graph error body:`, (error as any).body);
+        }
+      } else {
+        logger.error(`Unknown error type: ${typeof error}`);
+        logger.error(`Raw error:`, error);
+      }
       throw new Error(`Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -142,11 +163,9 @@ export class BookingService {
     start: string,
     end: string
   ): Promise<void> {
-    const conflicts: string[] = [];
-
     for (const email of participants) {
       try {
-        const conflicts = await this.graphClient.executeWithRetry(() =>
+        const calendarView = await this.graphClient.executeWithRetry(() =>
           client.api(`/users/${email}/calendarView`)
             .query({
               startDateTime: start,
@@ -156,8 +175,8 @@ export class BookingService {
             .get()
         );
 
-        if (conflicts.value && conflicts.value.length > 0) {
-          const conflictSubjects = conflicts.value.map((c: any) => c.subject || 'Untitled');
+        if (calendarView.value && calendarView.value.length > 0) {
+          const conflictSubjects = calendarView.value.map((c: any) => c.subject || 'Untitled');
           throw new Error(`Scheduling conflict for ${email}: ${conflictSubjects.join(', ')}`);
         }
       } catch (error) {
@@ -165,6 +184,23 @@ export class BookingService {
           throw error;
         }
         logger.warn(`Could not check conflicts for ${email}:`, error);
+        // Log the full error for debugging
+        if (error instanceof Error) {
+          logger.warn(`Error details for ${email}: ${error.message}`);
+          logger.warn(`Error stack for ${email}: ${error.stack}`);
+          // Check if it's a GraphError with additional properties
+          if ('statusCode' in error) {
+            logger.warn(`Graph error status code for ${email}: ${(error as any).statusCode}`);
+          }
+          if ('code' in error) {
+            logger.warn(`Graph error code for ${email}: ${(error as any).code}`);
+          }
+          if ('body' in error) {
+            logger.warn(`Graph error body for ${email}:`, (error as any).body);
+          }
+        } else {
+          logger.warn(`Unknown error type for ${email}:`, error);
+        }
       }
     }
   }

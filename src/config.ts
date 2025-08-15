@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
 import pino from 'pino';
+import { join, dirname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 // Load environment variables
 dotenv.config();
@@ -37,7 +39,7 @@ const config = ConfigSchema.parse({
     authMode: process.env.GRAPH_AUTH_MODE,
   },
   organizer: {
-    email: process.env.ORGANIZER_EMAIL,
+    email: process.env.GRAPH_ORGANIZER_EMAIL,
   },
   server: {
     port: process.env.PORT,
@@ -51,9 +53,37 @@ const config = ConfigSchema.parse({
   },
 });
 
-// Create logger that writes to file instead of stdout/stderr to avoid MCP communication issues
-export const logger = pino({
-  level: config.logging.level
-}, pino.destination('./logs/mcp-server.log'));
+// Ensure logs directory exists
+const logsDir = join(process.cwd(), 'logs');
+if (!existsSync(logsDir)) {
+  try {
+    mkdirSync(logsDir, { recursive: true });
+  } catch (error) {
+    console.warn('Failed to create logs directory, falling back to console logging:', error);
+  }
+}
 
+// Create logger that writes to file instead of stdout/stderr to avoid MCP communication issues
+// Fall back to console logging if file logging fails
+let logger: pino.Logger;
+try {
+  if (existsSync(logsDir)) {
+    const logFile = join(logsDir, 'mcp-server.log');
+    logger = pino({
+      level: config.logging.level
+    }, pino.destination(logFile));
+  } else {
+    // Fallback to console logging
+    logger = pino({
+      level: config.logging.level
+    });
+  }
+} catch (error) {
+  console.warn('Failed to initialize file logger, falling back to console logging:', error);
+  logger = pino({
+    level: config.logging.level
+  });
+}
+
+export { logger };
 export default config;

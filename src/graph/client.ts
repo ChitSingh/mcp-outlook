@@ -9,8 +9,8 @@ import config from '../config.js';
 export class GraphClientFactory {
   private auth: GraphAuth;
 
-  constructor() {
-    this.auth = new GraphAuth();
+  constructor(auth?: GraphAuth) {
+    this.auth = auth || new GraphAuth();
   }
 
   /**

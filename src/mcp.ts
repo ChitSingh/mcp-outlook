@@ -9,6 +9,7 @@ import { AvailabilityService } from './scheduling/availability.js';
 import { FindMeetingTimesService } from './scheduling/find.js';
 import { BookingService } from './scheduling/book.js';
 import { GraphClientFactory } from './graph/client.js';
+import { GraphAuth } from './graph/auth.js';
 import {
   HealthCheckInputSchema,
   HealthCheckOutputSchema,
@@ -40,10 +41,16 @@ export class MCPServer {
       }
     );
 
-    this.availabilityService = new AvailabilityService();
-    this.findMeetingTimesService = new FindMeetingTimesService();
-    this.bookingService = new BookingService();
-    this.graphClient = new GraphClientFactory();
+    // Create a single shared GraphAuth instance
+    const sharedAuth = new GraphAuth();
+    
+    // Create a single shared GraphClientFactory instance using the shared auth
+    this.graphClient = new GraphClientFactory(sharedAuth);
+    
+    // Pass the shared GraphClientFactory to all services
+    this.availabilityService = new AvailabilityService(this.graphClient);
+    this.findMeetingTimesService = new FindMeetingTimesService(this.graphClient);
+    this.bookingService = new BookingService(this.graphClient);
 
     this.setupToolHandlers();
   }

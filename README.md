@@ -58,7 +58,7 @@ GRAPH_CLIENT_SECRET=your_client_secret
 GRAPH_AUTH_MODE=app  # or 'delegated' for user auth
 
 # Default Organizer
-ORGANIZER_EMAIL=organizer@yourdomain.com
+GRAPH_ORGANIZER_EMAIL=organizer@yourdomain.com
 
 # Time Zone and Server Settings
 DEFAULT_TIMEZONE=Asia/Dubai
