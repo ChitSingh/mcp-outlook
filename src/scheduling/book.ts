@@ -17,6 +17,9 @@ export class BookingService {
   async bookMeeting(input: BookMeetingInput): Promise<BookMeetingOutput> {
     const organizer = input.organizer || config.organizer.email;
     
+    // Enhanced input validation with helpful error messages
+    this.validateMeetingInput(input);
+    
     logger.info(`Booking meeting: ${input.subject} from ${input.start} to ${input.end} with ${input.participants.length} participants`);
 
     const client = await this.graphClient.getClient();
@@ -270,6 +273,55 @@ export class BookingService {
     } catch (error) {
       logger.error('Failed to get meeting:', error);
       throw new Error(`Failed to get meeting: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Validate meeting input with helpful error messages
+   */
+  private validateMeetingInput(input: BookMeetingInput): void {
+    const errors: string[] = [];
+
+    // Check for missing bodyHtml
+    if (!input.bodyHtml || input.bodyHtml.trim() === '') {
+      errors.push("Missing required field 'bodyHtml'. Please provide a meeting description.");
+    }
+
+    // Check for proper date format
+    if (!input.start.endsWith('.000Z') && !input.start.includes('+') && !input.start.includes('-')) {
+      errors.push("Start time must be in UTC format (.000Z) or include timezone offset (+/-HH:MM). Example: 2025-08-16T14:30:00+04:00 for Dubai time");
+    }
+
+    if (!input.end.endsWith('.000Z') && !input.end.includes('+') && !input.end.includes('-')) {
+      errors.push("End time must be in UTC format (.000Z) or include timezone offset (+/-HH:MM). Example: 2025-08-16T15:00:00+04:00 for Dubai time");
+    }
+
+    // Check for valid date range
+    const startTime = new Date(input.start);
+    const endTime = new Date(input.end);
+    if (startTime >= endTime) {
+      errors.push("End time must be after start time");
+    }
+
+    // Check for reasonable meeting duration (not longer than 24 hours)
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const durationHours = durationMs / (1000 * 60 * 60);
+    if (durationHours > 24) {
+      errors.push("Meeting duration cannot exceed 24 hours");
+    }
+
+    if (errors.length > 0) {
+      const errorMessage = `Meeting validation failed:\n${errors.map(err => `- ${err}`).join('\n')}\n\nCorrect format:\n` +
+        `{\n` +
+        `  "start": "2025-08-16T14:30:00+04:00",\n` +
+        `  "end": "2025-08-16T15:00:00+04:00",\n` +
+        `  "subject": "Meeting Subject",\n` +
+        `  "participants": ["email@domain.com"],\n` +
+        `  "bodyHtml": "<p>Meeting description</p>",\n` +
+        `  "onlineMeeting": true\n` +
+        `}\n\nNote: Your email address is automatically set as the organizer from configuration.`;
+      
+      throw new Error(errorMessage);
     }
   }
 }

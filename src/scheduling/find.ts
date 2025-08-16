@@ -24,6 +24,9 @@ export class FindMeetingTimesService {
    * Find meeting times using Microsoft Graph findMeetingTimes or fallback to local intersection
    */
   async findMeetingTimes(input: ProposeMeetingTimesInput): Promise<ProposeMeetingTimesOutput> {
+    // Enhanced input validation with helpful error messages
+    this.validateFindMeetingTimesInput(input);
+    
     try {
       // Try Microsoft Graph findMeetingTimes first
       const graphResult = await this.tryGraphFindMeetingTimes(input);
@@ -196,6 +199,91 @@ export class FindMeetingTimesService {
     } catch (error) {
       logger.debug('Graph findMeetingTimes not available:', error);
       return false;
+    }
+  }
+
+  /**
+   * Validate find meeting times input with helpful error messages
+   */
+  private validateFindMeetingTimesInput(input: ProposeMeetingTimesInput): void {
+    const errors: string[] = [];
+
+    // Check for participants
+    if (!input.participants || input.participants.length === 0) {
+      errors.push("At least one participant is required");
+    }
+
+    // Check for valid email formats
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const email of input.participants) {
+      if (!emailRegex.test(email)) {
+        errors.push(`Invalid email format: ${email}`);
+      }
+    }
+
+    // Check duration
+    if (input.durationMinutes < 1 || input.durationMinutes > 1440) {
+      errors.push("durationMinutes must be between 1 and 1440 minutes");
+    }
+
+    // Check for proper date format
+    if (!input.windowStart.endsWith('.000Z') && !input.windowStart.includes('+') && !input.windowStart.includes('-')) {
+      errors.push("windowStart must be in UTC format (.000Z) or include timezone offset (+/-HH:MM). Example: 2025-08-16T09:00:00+04:00 for Dubai time");
+    }
+
+    if (!input.windowEnd.endsWith('.000Z') && !input.windowEnd.includes('+') && !input.windowEnd.includes('-')) {
+      errors.push("windowEnd must be in UTC format (.000Z) or include timezone offset (+/-HH:MM). Example: 2025-08-16T17:00:00+04:00 for Dubai time");
+    }
+
+    // Check for valid date range
+    const startTime = new Date(input.windowStart);
+    const endTime = new Date(input.windowEnd);
+    if (startTime >= endTime) {
+      errors.push("windowEnd must be after windowStart");
+    }
+
+    // Check for reasonable time window (not longer than 30 days)
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const durationDays = durationMs / (1000 * 60 * 60 * 24);
+    if (durationDays > 30) {
+      errors.push("Time window cannot exceed 30 days");
+    }
+
+    // Check maxCandidates
+    if (input.maxCandidates && (input.maxCandidates < 1 || input.maxCandidates > 20)) {
+      errors.push("maxCandidates must be between 1 and 20");
+    }
+
+    // Check buffer times
+    if (input.bufferBeforeMinutes && (input.bufferBeforeMinutes < 0 || input.bufferBeforeMinutes > 120)) {
+      errors.push("bufferBeforeMinutes must be between 0 and 120");
+    }
+
+    if (input.bufferAfterMinutes && (input.bufferAfterMinutes < 0 || input.bufferAfterMinutes > 120)) {
+      errors.push("bufferAfterMinutes must be between 0 and 120");
+    }
+
+    // Check minRequiredAttendees
+    if (input.minRequiredAttendees && (input.minRequiredAttendees < 1 || input.minRequiredAttendees > input.participants.length)) {
+      errors.push("minRequiredAttendees must be between 1 and the total number of participants");
+    }
+
+    if (errors.length > 0) {
+      const errorMessage = `Find meeting times validation failed:\n${errors.map(err => `- ${err}`).join('\n')}\n\nCorrect format:\n` +
+        `{\n` +
+        `  "participants": ["email1@domain.com", "email2@domain.com"],\n` +
+        `  "durationMinutes": 60,\n` +
+        `  "windowStart": "2025-08-16T09:00:00+04:00",\n` +
+        `  "windowEnd": "2025-08-16T17:00:00+04:00",\n` +
+        `  "maxCandidates": 5,\n` +
+        `  "bufferBeforeMinutes": 10,\n` +
+        `  "bufferAfterMinutes": 10,\n` +
+        `  "workHoursOnly": true,\n` +
+        `  "minRequiredAttendees": 2,\n` +
+        `  "timeZone": "Asia/Dubai"\n` +
+        `}\n\nNote: Your email address is automatically set as the organizer from configuration.`;
+      
+      throw new Error(errorMessage);
     }
   }
 }

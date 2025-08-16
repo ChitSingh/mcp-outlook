@@ -2,7 +2,16 @@ import { z } from 'zod';
 
 // Base schemas
 export const EmailSchema = z.string().email();
-export const ISODateTimeSchema = z.string().datetime();
+export const ISODateTimeSchema = z.string().refine(
+  (val) => {
+    // Check if it's a valid ISO 8601 datetime string
+    const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})$/;
+    return isoRegex.test(val);
+  },
+  {
+    message: "Date must be in ISO 8601 format with timezone. Examples: 2025-08-16T17:30:00.000Z or 2025-08-16T17:30:00+04:00"
+  }
+);
 export const TimeZoneSchema = z.string().min(1);
 
 // Working hours schema
@@ -37,8 +46,7 @@ export const GetAvailabilityOutputSchema = z.object({
     workingHours: WorkingHoursSchema.nullable(),
     busy: z.array(z.object({
       start: ISODateTimeSchema,
-      end: ISODateTimeSchema,
-      subject: z.string().optional()
+      end: ISODateTimeSchema
     })),
     free: z.array(z.object({
       start: ISODateTimeSchema,
@@ -81,7 +89,7 @@ export const BookMeetingInputSchema = z.object({
   start: ISODateTimeSchema,
   end: ISODateTimeSchema,
   organizer: z.string().optional(),
-  bodyHtml: z.string().optional(),
+  bodyHtml: z.string().min(1, "Meeting description (bodyHtml) is required"),
   location: z.string().optional(),
   onlineMeeting: z.boolean().optional().default(true),
   allowConflicts: z.boolean().optional().default(false),

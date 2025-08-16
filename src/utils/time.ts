@@ -170,3 +170,135 @@ export function getCurrentTimeInTimezone(timezone: string): Date {
 export function normalizeISOString(date: Date): string {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
+
+/**
+ * Parse Microsoft Graph API time strings that are already in local timezone
+ * but get misinterpreted as UTC by JavaScript's Date constructor.
+ * 
+ * This function handles the specific case where the API returns:
+ * - "2025-08-18T04:00:00.0000000" (which represents 8:00 AM Dubai time)
+ * - But JavaScript treats it as 4:00 AM UTC
+ * 
+ * We extract the raw components and format them with the correct timezone offset.
+ */
+export function parseGraphAPITime(dateTimeString: string, timezone: string): string {
+  // Remove any milliseconds and timezone indicators
+  const cleanString = dateTimeString.replace(/\.\d{6,}Z?$/, '');
+  
+  // Extract year, month, day, hour, minute, second
+  const match = cleanString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+  if (!match) {
+    // Fallback to regular parsing if format doesn't match
+    const date = new Date(dateTimeString);
+    return convertUTCToTimezone(date, timezone);
+  }
+  
+  const [, year, month, day, hour, minute, second] = match;
+  
+  // Ensure all components are defined
+  if (!year || !month || !day || !hour || !minute || !second) {
+    // Fallback to regular parsing if any component is missing
+    const date = new Date(dateTimeString);
+    return convertUTCToTimezone(date, timezone);
+  }
+  
+  // For Dubai timezone, we know it's +04:00
+  if (timezone === 'Asia/Dubai') {
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}+04:00`;
+  }
+  
+  // For other timezones, calculate the offset more reliably
+  try {
+    // Create a date object representing the local time in the target timezone
+    const localDate = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+    
+    // Get the timezone offset using Intl.DateTimeFormat
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    // Format the date in the target timezone
+    const localTimeString = formatter.formatToParts(localDate);
+    const localTimeMap = new Map(localTimeString.map(part => [part.type, part.value]));
+    
+    // Get the timezone offset in minutes for the current date
+    const utcDate = new Date(Date.UTC(
+      parseInt(year),
+      parseInt(month) - 1,
+      parseInt(day),
+      parseInt(hour),
+      parseInt(minute),
+      parseInt(second)
+    ));
+    
+    // Calculate the offset by comparing UTC time with local time in the target timezone
+    const utcTime = utcDate.getTime();
+    const localTimeInTimezone = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`).getTime();
+    
+    // The offset is the difference between local time and UTC time
+    // If local time is ahead of UTC, offset is positive
+    const offsetMs = localTimeInTimezone - utcTime;
+    const offsetHours = Math.floor(Math.abs(offsetMs) / (1000 * 60 * 60));
+    const offsetMinutes = Math.floor((Math.abs(offsetMs) / (1000 * 60)) % 60);
+    const offsetSign = offsetMs >= 0 ? '+' : '-';
+    
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
+  } catch (error) {
+    // Fallback: assume the time is already in the correct timezone
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+  }
+}
+
+/**
+ * Convert UTC time to a specific timezone and format as ISO string with timezone offset
+ */
+export function convertUTCToTimezone(utcDate: Date, timezone: string): string {
+  try {
+    // For Dubai timezone, we know it's +04:00
+    if (timezone === 'Asia/Dubai') {
+      const localDate = new Date(utcDate.getTime() + (4 * 60 * 60 * 1000)); // Add 4 hours
+      
+      const year = localDate.getUTCFullYear();
+      const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(localDate.getUTCDate()).padStart(2, '0');
+      const hour = String(localDate.getUTCHours()).padStart(2, '0');
+      const minute = String(localDate.getUTCMinutes()).padStart(2, '0');
+      const second = String(localDate.getUTCSeconds()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hour}:${minute}:${second}+04:00`;
+    }
+    
+    // For other timezones, try to calculate the offset
+    const localDate = new Date(utcDate.toLocaleString('en-US', { timeZone: timezone }));
+    
+    // Get the timezone offset in minutes
+    const utcTime = utcDate.getTime();
+    const localTime = localDate.getTime();
+    const offsetMs = localTime - utcTime;
+    
+    // Calculate offset hours and minutes
+    const offsetHours = Math.floor(Math.abs(offsetMs) / (1000 * 60 * 60));
+    const offsetMinutes = Math.floor((Math.abs(offsetMs) / (1000 * 60)) % 60);
+    const offsetSign = offsetMs >= 0 ? '+' : '-';
+    
+    // Format the local date
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const hour = String(localDate.getHours()).padStart(2, '0');
+    const minute = String(localDate.getMinutes()).padStart(2, '0');
+    const second = String(localDate.getSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
+  } catch (error) {
+    // Fallback to UTC if timezone conversion fails
+    return utcDate.toISOString();
+  }
+}
