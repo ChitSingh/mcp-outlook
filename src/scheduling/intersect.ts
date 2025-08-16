@@ -26,7 +26,62 @@ export class IntersectionService {
     
     logger.info(`Finding intersecting slots for ${durationMinutes} minute meeting with ${userAvailabilities.length} participants`);
 
-    // Convert free slots to TimeInterval objects
+    // Handle single user case - no intersection needed
+    if (userAvailabilities.length === 1) {
+      const singleUser = userAvailabilities[0];
+      if (!singleUser) return [];
+      
+      logger.info(`Single user case: ${singleUser.email} with ${singleUser.free.length} free slots`);
+      
+      const candidates: CandidateSlot[] = [];
+      
+      for (const slot of singleUser.free) {
+        const slotStart = new Date(slot.start);
+        const slotEnd = new Date(slot.end);
+        const slotDuration = getDurationMinutes(slotStart, slotEnd);
+        
+        // Check if slot can accommodate the meeting duration
+        if (slotDuration >= durationMinutes) {
+          // Apply buffers if specified
+          let meetingStart: Date;
+          let meetingEnd: Date;
+          
+          if (bufferBeforeMinutes === 0 && bufferAfterMinutes === 0) {
+            // No buffers - use the full slot
+            meetingStart = new Date(slotStart);
+            meetingEnd = new Date(slotEnd);
+          } else {
+            // Apply buffers to create the effective meeting slot
+            const totalBufferTime = bufferBeforeMinutes + bufferAfterMinutes;
+            const effectiveDuration = slotDuration - totalBufferTime;
+            
+            if (effectiveDuration < durationMinutes) {
+              continue; // Not enough time after buffers
+            }
+            
+            // Calculate the centered meeting slot
+            meetingStart = new Date(slotStart);
+            meetingStart.setMinutes(meetingStart.getMinutes() + bufferBeforeMinutes);
+            
+            meetingEnd = new Date(meetingStart);
+            meetingEnd.setMinutes(meetingEnd.getMinutes() + durationMinutes);
+          }
+          
+          candidates.push({
+            start: normalizeISOString(meetingStart),
+            end: normalizeISOString(meetingEnd),
+            attendeeAvailability: { [singleUser.email]: 'free' },
+            confidence: 1.0 // Full confidence for single user
+          });
+        }
+      }
+      
+      // Sort by start time and return top candidates
+      candidates.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+      return candidates.slice(0, maxCandidates);
+    }
+
+    // Convert free slots to TimeInterval objects for multi-user intersection
     const freeIntervals = userAvailabilities.map(user => ({
       email: user.email,
       intervals: user.free.map(slot => ({
@@ -71,15 +126,15 @@ export class IntersectionService {
         attendeeAvailability[user.email] = 'free';
       }
 
-      // Debug: Check if we actually have a valid intersection
-      if (commonInterval === interval) {
+      // For multi-user case, we need at least one intersection
+      if (freeIntervals.length > 1 && commonInterval === interval) {
         // No intersection found with other users, skip this slot
         continue;
       }
 
       // Check if the intersection can accommodate the meeting duration
       const intersectionDuration = getDurationMinutes(commonInterval.start, commonInterval.end);
-      if (intersectionDuration > durationMinutes) {
+      if (intersectionDuration >= durationMinutes) {
         let slotStart: Date;
         let slotEnd: Date;
         
