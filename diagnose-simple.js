@@ -220,7 +220,7 @@ async function diagnoseGraphAPI() {
     console.log('❌ If authentication fails:');
     console.log('   - Check your Azure app registration configuration');
     console.log('   - Verify client ID, tenant ID, and client secret');
-    console.log('   - Ensure device code flow is enabled');
+    console.log('   - Ensure APPLICATION permissions are granted (not delegated)');
     console.log('');
     console.log('🔧 Next steps:');
     console.log('   1. Check the Azure Portal for your app registration');

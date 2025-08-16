@@ -4,10 +4,10 @@ import { join } from 'path';
 // Test booking a meeting with yourself
 const testMeeting = {
   subject: "Test Meeting - MCP Server Test",
-  participants: ["singh.chitsimran@outlook.com"],
+  participants: ["chitsimran_singh@masaood.com"],
   start: "2025-08-16T10:00:00.000Z", // Tomorrow at 10 AM UTC
   end: "2025-08-16T10:30:00.000Z",   // 30 minutes duration
-  organizer: "singh.chitsimran@outlook.com",
+  organizer: "chitsimran_singh@masaood.com",
   bodyHtml: "<p>This is a test meeting to verify the MCP server booking functionality is working correctly.</p>",
   onlineMeeting: true,
   remindersMinutesBeforeStart: 15
@@ -47,10 +47,10 @@ setTimeout(() => {
   console.log('Server should be running now. You can test the booking functionality.');
   console.log('To test the MCP server in Claude, make sure it\'s configured to use this server.');
   console.log('The server is running with the following configuration:');
-  console.log('- Organizer: singh.chitsimran@outlook.com');
-  console.log('- Tenant ID: 31da92a8-2f5c-44ea-99bd-626d32113f36');
-  console.log('- Auth Mode: delegated');
-  console.log('- Timezone: Asia/Dubai');
+console.log('- Organizer: chitsimran_singh@masaood.com');
+console.log('- Tenant ID: 31da92a8-2f5c-44ea-99bd-626d32113f36');
+console.log('- Auth Mode: app (application permissions)');
+console.log('- Timezone: Asia/Dubai');
 }, 2000);
 
 // Keep the process alive

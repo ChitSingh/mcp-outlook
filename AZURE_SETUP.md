@@ -10,7 +10,7 @@ This guide will help you set up Azure App Registration with the correct permissi
 - **Use case**: Background services, daemons, admin operations
 - **Limitation**: Cannot access user-specific data like calendars
 
-### Delegated Permissions (User-based)
+### Application Permissions (Service Principal)
 - **What it is**: The app acts on behalf of a signed-in user
 - **Use case**: User calendar access, meeting scheduling, availability checking
 - **Required for**: This MCP server to work properly
@@ -30,7 +30,7 @@ This guide will help you set up Azure App Registration with the correct permissi
 1. In your app registration, go to **API permissions**
 2. Click **Add a permission**
 3. Select **Microsoft Graph**
-4. Choose **Delegated permissions**
+4. Choose **Application permissions**
 5. Add these permissions:
    - **Calendars.ReadWrite** - Read and write user calendars
    - **User.Read** - Read user profile
@@ -67,8 +67,8 @@ This guide will help you set up Azure App Registration with the correct permissi
 Update your `.env` file:
 
 ```env
-# Change this from 'app' to 'delegated'
-GRAPH_AUTH_MODE=delegated
+# Use application permissions
+GRAPH_AUTH_MODE=app
 
 # Your Azure app registration details
 GRAPH_CLIENT_ID=your-client-id-here
@@ -87,8 +87,8 @@ GRAPH_ORGANIZER_EMAIL=your-email@yourdomain.com
 - Results in "Failed to create event" and "Failed to get schedule" errors
 
 ### Solution
-- `GRAPH_AUTH_MODE=delegated` uses delegated permissions
-- Delegated permissions can access user calendars
+- `GRAPH_AUTH_MODE=app` uses application permissions
+- Application permissions can access user calendars with proper configuration
 - Requires user consent (device code flow) but works for calendar operations
 
 ## 🚀 Testing
@@ -125,7 +125,7 @@ After updating your `.env` file:
 ## 🆘 Troubleshooting
 
 ### Still getting "Failed to create event"?
-1. Verify `GRAPH_AUTH_MODE=delegated` in `.env`
+1. Verify `GRAPH_AUTH_MODE=app` in `.env`
 2. Check that admin consent was granted
 3. Ensure your email is in the same Azure tenant
 4. Verify all required permissions are granted
@@ -136,7 +136,7 @@ After updating your `.env` file:
 3. Ensure you're using the correct tenant ID
 4. Check if your account has admin rights in the tenant
 
-### "invalid_client" error in delegated mode?
+### "invalid_client" error in app mode?
 1. **Add redirect URI**: `https://login.microsoftonline.com/common/oauth2/nativeclient`
 2. **Enable device code flow** in Authentication settings
 3. **Supported account types**: Should include personal Microsoft accounts

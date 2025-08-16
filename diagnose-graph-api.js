@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { GraphAuth } from './src/graph/auth.js';
+import { GraphAuth } from './dist/graph/auth.js';
 import { Client } from '@microsoft/microsoft-graph-client';
-import config from './src/config.js';
-import { logger } from './src/config.js';
+import config from './dist/config.js';
+import { logger } from './dist/config.js';
 
 /**
  * Comprehensive diagnostic tool for Microsoft Graph API 401 errors
@@ -223,7 +223,7 @@ async function diagnoseGraphAPI() {
     console.log('❌ If authentication fails:');
     console.log('   - Check your Azure app registration configuration');
     console.log('   - Verify client ID, tenant ID, and client secret');
-    console.log('   - Ensure device code flow is enabled');
+    console.log('   - Ensure APPLICATION permissions are granted (not delegated)');
     console.log('');
     console.log('🔧 Next steps:');
     console.log('   1. Check the Azure Portal for your app registration');

@@ -11,10 +11,10 @@ async function testDirectBooking() {
     // Test meeting data
     const testMeeting = {
       subject: "Direct Test Meeting - MCP Server",
-      participants: ["singh.chitsimran@outlook.com"],
+      participants: ["chitsimran_singh@masaood.com"],
       start: "2025-08-16T14:00:00.000Z", // Tomorrow at 2 PM UTC
       end: "2025-08-16T14:30:00.000Z",   // 30 minutes duration
-      organizer: "singh.chitsimran@outlook.com",
+      organizer: "chitsimran_singh@masaood.com",
       bodyHtml: "<p>This is a direct test of the MCP server booking functionality.</p>",
       onlineMeeting: true,
       remindersMinutesBeforeStart: 15
@@ -33,41 +33,38 @@ async function testDirectBooking() {
       // This should test if we can make basic API calls
       const basicAuthTest = await server.handleBookMeeting({
         subject: "Basic Auth Test",
-        participants: ["singh.chitsimran@outlook.com"],
+        participants: ["chitsimran_singh@masaood.com"],
         start: "2025-08-16T15:00:00.000Z",
         end: "2025-08-16T15:30:00.000Z",
-        organizer: "singh.chitsimran@outlook.com",
+        organizer: "chitsimran_singh@masaood.com",
         allowConflicts: true // Skip conflict checking to isolate the issue
       });
       console.log('Basic auth test successful:', basicAuthTest);
     } catch (error) {
       console.log('Basic auth test failed:', error.message);
-      if (error.message.includes('fetch failed') || error.message.includes('authentication')) {
-        console.log('\nAuthentication is in progress. Please check the console above for:');
-        console.log('1. A URL to visit (usually https://microsoft.com/devicelogin)');
-        console.log('2. A code to enter on that page');
-        console.log('3. Complete the authentication in your browser');
-        console.log('\nAfter completing authentication, run this test again.');
+      if (error.message.includes('authentication') || error.message.includes('permission')) {
+        console.log('\nThis looks like a permission issue. Please check:');
+        console.log('1. Your Azure app has APPLICATION permissions (not delegated)');
+        console.log('2. Admin consent has been granted for all permissions');
+        console.log('3. The correct tenant ID and client ID are configured');
       }
     }
     
     // Test the book_meeting tool
     console.log('\n--- Testing book_meeting tool ---');
-    console.log('Note: If this is the first time running, you may need to complete device code authentication.');
-    console.log('Check the console output above for the authentication code and URL.');
-    console.log('The test will wait for authentication to complete...');
+    console.log('Note: Using application permissions - no user interaction required.');
+    console.log('The test will proceed with service principal authentication...');
     
     try {
       const bookingResult = await server.handleBookMeeting(testMeeting);
       console.log('Booking result:', bookingResult);
       console.log('\nDirect test completed successfully!');
     } catch (error) {
-      if (error.message.includes('fetch failed') || error.message.includes('authentication')) {
-        console.log('\nAuthentication is in progress. Please check the console above for:');
-        console.log('1. A URL to visit (usually https://microsoft.com/devicelogin)');
-        console.log('2. A code to enter on that page');
-        console.log('3. Complete the authentication in your browser');
-        console.log('\nAfter completing authentication, run this test again.');
+      if (error.message.includes('authentication') || error.message.includes('permission')) {
+        console.log('\nThis looks like a permission issue. Please check:');
+        console.log('1. Your Azure app has APPLICATION permissions (not delegated)');
+        console.log('2. Admin consent has been granted for all permissions');
+        console.log('3. The correct tenant ID and client ID are configured');
       } else {
         console.error('Error during booking:', error);
       }

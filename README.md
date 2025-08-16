@@ -30,7 +30,7 @@ An MCP (Model Context Protocol) server that connects to Microsoft Outlook via Mi
 
 1. In your app registration, go to "API permissions"
 2. Click "Add a permission" → "Microsoft Graph"
-3. Add these **Application permissions** (for app-only auth) or **Delegated permissions** (for user auth):
+3. Add these **Application permissions** (for app-only auth):
    - `Calendars.Read` - Read calendar availability
    - `Calendars.ReadWrite` - Create and manage calendar events
    - `User.Read` - Read user information
@@ -55,7 +55,7 @@ An MCP (Model Context Protocol) server that connects to Microsoft Outlook via Mi
 GRAPH_TENANT_ID=your_tenant_id_or_common
 GRAPH_CLIENT_ID=your_app_id
 GRAPH_CLIENT_SECRET=your_client_secret
-GRAPH_AUTH_MODE=app  # or 'delegated' for user auth
+GRAPH_AUTH_MODE=app  # Application permissions only
 
 # Default Organizer
 GRAPH_ORGANIZER_EMAIL=organizer@yourdomain.com
@@ -266,7 +266,7 @@ When `findMeetingTimes` is unavailable (due to tenant policies, insufficient per
 
 ### Authentication Modes
 
-- **Delegated**: User authentication via device code flow (recommended for personal use)
+- **Application**: Service principal authentication (recommended for production use)
 - **Application**: Service principal authentication (recommended for production/automation)
 
 ### Timezone Handling

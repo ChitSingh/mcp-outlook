@@ -8,16 +8,27 @@ async function testAvailability() {
     // Create an instance of the MCP server
     const server = new MCPServer();
     
-    // Test availability data
+    // Calculate next Monday
+    const today = new Date();
+    const daysUntilMonday = (8 - today.getDay()) % 7; // 0 = Sunday, 1 = Monday, etc.
+    const nextMonday = new Date(today);
+    nextMonday.setDate(today.getDate() + daysUntilMonday);
+    nextMonday.setHours(8, 0, 0, 0); // 8 AM
+    
+    const nextMondayEnd = new Date(nextMonday);
+    nextMondayEnd.setHours(18, 0, 0, 0); // 6 PM
+    
+    // Test availability data for next Monday
     const availabilityRequest = {
-      participants: ["singh.chitsimran@outlook.com"],
-      windowStart: "2025-08-16T08:00:00.000Z", // Tomorrow 8 AM UTC
-      windowEnd: "2025-08-16T18:00:00.000Z",   // Tomorrow 6 PM UTC
+      participants: ["chitsimran_singh@masaood.com"],
+      windowStart: nextMonday.toISOString(),
+      windowEnd: nextMondayEnd.toISOString(),
       timeZone: "Asia/Dubai",
       granularityMinutes: 30,
       workHoursOnly: true
     };
     
+    console.log('Next Monday date:', nextMonday.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
     console.log('Availability request:', JSON.stringify(availabilityRequest, null, 2));
     
     // Test the health check first
